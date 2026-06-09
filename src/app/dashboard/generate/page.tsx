@@ -40,7 +40,10 @@ export default function GeneratePage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
-        <Link href="/dashboard" className="text-gray-400 hover:text-white flex items-center gap-2 transition-colors group">
+        <Link
+          href="/dashboard"
+          className="text-gray-400 hover:text-white flex items-center gap-2 transition-colors group"
+        >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           Dashboard
         </Link>
@@ -70,7 +73,7 @@ export default function GeneratePage() {
           {result ? (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <ContentCard content={result} />
-              <button 
+              <button
                 onClick={() => setResult(null)}
                 className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors py-2"
               >
@@ -104,9 +107,3 @@ export default function GeneratePage() {
     </div>
   );
 }
-/home/engine/.bashrc: line 1: syntax error near unexpected token `('
-/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
-/home/engine/.bashrc: line 1: syntax error near unexpected token `('
-/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
-/home/engine/.bashrc: line 1: syntax error near unexpected token `('
-/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
