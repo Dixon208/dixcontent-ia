@@ -23,14 +23,15 @@ export default function GeneratePage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate content');
+        const errData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errData.error || `HTTP ${response.status}`);
       }
 
       const data = await response.json();
       setResult(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Generation error:', error);
-      alert('Something went wrong. Please try again.');
+      alert(error.message || 'Something went wrong. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -103,3 +104,9 @@ export default function GeneratePage() {
     </div>
   );
 }
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
