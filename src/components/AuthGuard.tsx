@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { Loader2, AlertTriangle } from 'lucide-react';
@@ -10,32 +10,60 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [errorMsg, setErrorMsg] = useState('');
   const router = useRouter();
   const pathname = usePathname();
+  const checkedRef = useRef(false);
 
   useEffect(() => {
+    if (checkedRef.current) return;
+    checkedRef.current = true;
+
     let cancelled = false;
-    let timeout: ReturnType<typeof setTimeout>;
 
     const checkAuth = async () => {
       try {
-        const supabase = createBrowserClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
+        // Check env vars first
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-        // Add a timeout to prevent infinite loading
-        timeout = setTimeout(() => {
+        if (!url || !anonKey) {
+          setState('error');
+          setErrorMsg(
+            'Missing Supabase environment variables. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your Vercel project settings.'
+          );
+          return;
+        }
+
+        if (!url.startsWith('https://') || !url.includes('.supabase.co')) {
+          setState('error');
+          setErrorMsg(
+            'NEXT_PUBLIC_SUPABASE_URL does not look like a valid Supabase URL. It should be https://[project].supabase.co'
+          );
+          return;
+        }
+
+        const supabase = createBrowserClient(url, anonKey);
+
+        // Timeout to prevent infinite hanging
+        const ac = new AbortController();
+        const timeout = setTimeout(() => {
+          ac.abort();
           if (!cancelled) {
             setState('error');
             setErrorMsg(
-              'Connection to Supabase timed out. Check that NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set correctly in your environment.'
+              'Connection to Supabase timed out after 8 seconds. Your Supabase project URL or anon key is likely incorrect.'
             );
           }
-        }, 10000);
+        }, 8000);
 
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
         clearTimeout(timeout);
 
         if (cancelled) return;
+
+        if (error) {
+          setState('error');
+          setErrorMsg(error.message);
+          return;
+        }
 
         const isAuthPath = pathname.startsWith('/auth');
         const isDashboardPath = pathname.startsWith('/dashboard');
@@ -49,9 +77,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         }
       } catch (err: any) {
         if (!cancelled) {
-          clearTimeout(timeout);
           setState('error');
-          setErrorMsg(err.message || 'Failed to connect to Supabase');
+          setErrorMsg(err?.message || 'Failed to connect to Supabase. Check your environment variables.');
         }
       }
     };
@@ -60,7 +87,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true;
-      clearTimeout(timeout);
     };
   }, [pathname, router]);
 
@@ -83,14 +109,18 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           <p className="text-white font-bold text-lg">Authentication Error</p>
           <p className="text-gray-400 text-sm">{errorMsg}</p>
           <p className="text-gray-500 text-xs mt-4">
-            Make sure your Supabase project is active and the environment variables are correctly set in Vercel.
+            Add or fix these in Vercel → Settings → Environment Variables:
           </p>
+          <div className="bg-gray-900 rounded-lg p-3 text-left text-xs font-mono text-gray-400 space-y-1">
+            <div>NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co</div>
+            <div>NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...your-anon-key</div>
+          </div>
         </div>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => { checkedRef.current = false; window.location.reload(); }}
           className="mt-4 px-6 py-2 bg-gray-800 rounded-lg text-white font-medium hover:bg-gray-700 transition-colors"
         >
-          Retry
+          Retry After Fixing
         </button>
       </div>
     );
