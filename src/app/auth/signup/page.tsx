@@ -3,179 +3,176 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createBrowserClient } from '@supabase/ssr';
-import { Sparkles, Mail, Lock, Loader2, ArrowLeft, User } from 'lucide-react';
-import AuthGuard from '@/components/AuthGuard';
+import { supabase, isSupabaseConfigured } from '@/supabase/client';
+import { Sparkles, Mail, Lock, User, Loader2, ArrowLeft } from 'lucide-react';
 
 export default function SignupPage() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isSupabaseConfigured()) {
+      setError('Supabase is not configured. Check your environment variables.');
+      return;
+    }
     setLoading(true);
     setError(null);
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: {
-          full_name: name,
-        },
-      },
+      options: { data: { full_name: name } },
     });
 
     if (error) {
       setError(error.message);
       setLoading(false);
-    } else {
-      // Create user profile via backend API
-      try {
-        await fetch('/api/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: data.user?.id,
-            email: data.user?.email,
-            name: name,
-          }),
-        });
-      } catch (err) {
-        console.error('Failed to create profile:', err);
-      }
-      
-      router.push('/dashboard');
+      return;
     }
+
+    if (data?.user?.identities?.length === 0) {
+      setError('This email is already registered. Try signing in instead.');
+      setLoading(false);
+      return;
+    }
+
+    // Call our API to create the user profile with credits
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        console.error('Profile creation warning:', err);
+      }
+    } catch (err) {
+      console.error('Profile creation error:', err);
+    }
+
+    setLoading(false);
+    router.replace('/dashboard');
   };
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-gray-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-600/10 blur-[100px] rounded-full pointer-events-none -z-10" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-600/10 blur-[100px] rounded-full pointer-events-none -z-10" />
-
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <Link href="/" className="flex justify-center items-center gap-2 mb-6 text-gray-400 hover:text-white transition-colors group">
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            Back to home
-          </Link>
-          <div className="flex justify-center">
-            <div className="bg-gradient-primary p-2.5 rounded-2xl shadow-lg shadow-purple-500/20">
-              <Sparkles className="w-8 h-8 text-white" />
+    <div className="min-h-screen bg-gray-950 flex flex-col">
+      <div className="p-4">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Home
+        </Link>
+      </div>
+      <div className="flex-1 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center space-y-2">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="bg-gradient-primary p-2 rounded-lg">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-2xl font-bold text-white">DixContent AI</span>
             </div>
+            <h1 className="text-3xl font-bold text-white">Create Account</h1>
+            <p className="text-gray-400">Start with 5 free credits, no credit card needed.</p>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
-            Create your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-400">
-            Already have an account?{' '}
-            <Link href="/auth/login" className="font-bold text-purple-400 hover:text-purple-300">
-              Log in
-            </Link>
-          </p>
-        </div>
 
-        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-gray-900 py-8 px-4 shadow-2xl border border-gray-800 sm:rounded-2xl sm:px-10">
-            <form className="space-y-6" onSubmit={handleSignup}>
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-300">
-                  Full Name
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-xl">
+            <form onSubmit={handleSignup} className="space-y-6">
+              <div className="space-y-2">
+                <label htmlFor="name" className="text-sm font-medium text-gray-300">
+                  Name
                 </label>
-                <div className="mt-1 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-500" />
-                  </div>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600" />
                   <input
                     id="name"
-                    name="name"
                     type="text"
-                    required
-                    className="appearance-none block w-full pl-10 px-3 py-3 border border-gray-800 bg-gray-950 rounded-xl shadow-sm placeholder-gray-600 focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-white sm:text-sm transition-colors"
-                    placeholder="John Doe"
+                    placeholder="Your name"
+                    className="w-full bg-gray-950 border border-gray-800 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition-colors"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    required
                   />
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-300">
-                  Email address
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium text-gray-300">
+                  Email
                 </label>
-                <div className="mt-1 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-500" />
-                  </div>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600" />
                   <input
                     id="email"
-                    name="email"
                     type="email"
-                    autoComplete="email"
-                    required
-                    className="appearance-none block w-full pl-10 px-3 py-3 border border-gray-800 bg-gray-950 rounded-xl shadow-sm placeholder-gray-600 focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-white sm:text-sm transition-colors"
                     placeholder="you@example.com"
+                    className="w-full bg-gray-950 border border-gray-800 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition-colors"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    required
                   />
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-300">
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium text-gray-300">
                   Password
                 </label>
-                <div className="mt-1 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-500" />
-                  </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600" />
                   <input
                     id="password"
-                    name="password"
                     type="password"
-                    autoComplete="new-password"
-                    required
-                    className="appearance-none block w-full pl-10 px-3 py-3 border border-gray-800 bg-gray-950 rounded-xl shadow-sm placeholder-gray-600 focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-white sm:text-sm transition-colors"
-                    placeholder="••••••••"
+                    placeholder="At least 6 characters"
+                    className="w-full bg-gray-950 border border-gray-800 rounded-lg pl-11 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition-colors"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    minLength={6}
+                    required
                   />
                 </div>
               </div>
 
               {error && (
-                <div className="rounded-md bg-red-500/10 border border-red-500/20 p-4">
-                  <p className="text-sm text-red-400 text-center">{error}</p>
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400">
+                  {error}
                 </div>
               )}
 
-              <div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-gradient-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 transition-all"
-                >
-                  {loading ? (
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-primary py-4 rounded-xl font-bold text-white shadow-lg hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    'Create Account'
-                  )}
-                </button>
-              </div>
+                    Creating account...
+                  </>
+                ) : (
+                  'Create Account'
+                )}
+              </button>
             </form>
+
+            <p className="text-center text-sm text-gray-500 mt-6">
+              Already have an account?{' '}
+              <Link href="/auth/login" className="text-purple-400 hover:text-purple-300 transition-colors font-medium">
+                Sign In
+              </Link>
+            </p>
           </div>
         </div>
       </div>
-    </AuthGuard>
+    </div>
   );
 }
