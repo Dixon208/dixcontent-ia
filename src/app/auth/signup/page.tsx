@@ -25,19 +25,18 @@ export default function SignupPage() {
 
     setLoading(true);
 
-    try {
-      const result = await Promise.race([
-        supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: name } },
-        }),
-        new Promise<any>((_, reject) =>
-          setTimeout(() => reject(new Error('Connection timed out. Check your Supabase credentials.')), 10000)
-        ),
-      ]);
+    const timeoutId = setTimeout(() => {
+      setError('Connection timed out. Check your Supabase credentials.');
+      setLoading(false);
+    }, 10000);
 
-      const { data, error: authError } = result;
+    try {
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: name } },
+      });
+      clearTimeout(timeoutId);
 
       if (authError) {
         setError(authError.message);
@@ -67,6 +66,7 @@ export default function SignupPage() {
 
       router.replace('/dashboard');
     } catch (err: any) {
+      clearTimeout(timeoutId);
       setError(err?.message || 'An error occurred during sign up.');
       setLoading(false);
     }

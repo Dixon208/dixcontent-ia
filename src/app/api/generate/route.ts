@@ -34,7 +34,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient credits' }, { status: 403 })
     }
 
-    const { caption, hashtags, post_ideas } = await generateAIContent(topic, niche, platform)
+    // Normalize platform to lowercase to match prompt keys
+    const normalizedPlatform = platform.toLowerCase();
+    const { caption, hashtags, post_ideas } = await generateAIContent(topic, niche, normalizedPlatform)
 
     if (!isPro) {
       await getSupabaseAdmin()

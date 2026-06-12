@@ -24,15 +24,15 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    try {
-      const result = await Promise.race([
-        supabase.auth.signInWithPassword({ email, password }),
-        new Promise<any>((_, reject) =>
-          setTimeout(() => reject(new Error('Connection timed out. Check your Supabase credentials.')), 10000)
-        ),
-      ]);
+    // Timeout safeguard — alert the user after 10s
+    const timeoutId = setTimeout(() => {
+      setError('Connection timed out. Check your Supabase credentials.');
+      setLoading(false);
+    }, 10000);
 
-      const { data, error: authError } = result;
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      clearTimeout(timeoutId);
 
       if (authError) {
         setError(authError.message);
@@ -47,6 +47,7 @@ export default function LoginPage() {
 
       setLoading(false);
     } catch (err: any) {
+      clearTimeout(timeoutId);
       setError(err?.message || 'An error occurred during sign in.');
       setLoading(false);
     }

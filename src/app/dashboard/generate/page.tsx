@@ -28,7 +28,18 @@ export default function GeneratePage() {
       }
 
       const data = await response.json();
-      setResult(data);
+      // Wrap response into ContentHistory shape for ContentCard
+      setResult({
+        id: '',
+        user_id: '',
+        topic: formData.topic,
+        niche: formData.niche,
+        platform: formData.platform,
+        caption: data.caption,
+        hashtags: data.hashtags,
+        post_ideas: data.post_ideas,
+        created_at: new Date().toISOString(),
+      });
     } catch (error: any) {
       console.error('Generation error:', error);
       alert(error.message || 'Something went wrong. Please try again.');
