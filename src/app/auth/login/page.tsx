@@ -24,15 +24,11 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    // Timeout safeguard — alert the user after 10s
-    const timeoutId = setTimeout(() => {
-      setError('Connection timed out. Check your Supabase credentials.');
-      setLoading(false);
-    }, 10000);
-
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-      clearTimeout(timeoutId);
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
       if (authError) {
         setError(authError.message);
@@ -45,10 +41,12 @@ export default function LoginPage() {
         return;
       }
 
+      // No session and no error — user may need to confirm email
+      setError('No session returned. Check if your email is confirmed.');
       setLoading(false);
     } catch (err: any) {
-      clearTimeout(timeoutId);
-      setError(err?.message || 'An error occurred during sign in.');
+      console.error('Login error:', err);
+      setError(err?.message || 'Network error. Please check your connection and try again.');
       setLoading(false);
     }
   };

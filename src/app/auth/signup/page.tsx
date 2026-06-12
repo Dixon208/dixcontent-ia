@@ -25,18 +25,12 @@ export default function SignupPage() {
 
     setLoading(true);
 
-    const timeoutId = setTimeout(() => {
-      setError('Connection timed out. Check your Supabase credentials.');
-      setLoading(false);
-    }, 10000);
-
     try {
       const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: { data: { full_name: name } },
       });
-      clearTimeout(timeoutId);
 
       if (authError) {
         setError(authError.message);
@@ -50,6 +44,7 @@ export default function SignupPage() {
         return;
       }
 
+      // Create user profile (best-effort, don't block on failure)
       try {
         const res = await fetch('/api/auth/signup', {
           method: 'POST',
@@ -57,17 +52,17 @@ export default function SignupPage() {
           body: JSON.stringify({ email, password, name }),
         });
         if (!res.ok) {
-          const err = await res.json();
-          console.error('Profile creation warning:', err);
+          const errData = await res.json().catch(() => ({}));
+          console.error('Profile creation warning:', errData);
         }
       } catch (err) {
-        console.error('Profile creation error:', err);
+        console.error('Profile creation network error:', err);
       }
 
       router.replace('/dashboard');
     } catch (err: any) {
-      clearTimeout(timeoutId);
-      setError(err?.message || 'An error occurred during sign up.');
+      console.error('Signup error:', err);
+      setError(err?.message || 'Network error. Please check your connection and try again.');
       setLoading(false);
     }
   };
