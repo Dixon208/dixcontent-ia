@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { supabase, isSupabaseConfigured } from '@/supabase/client';
 import { Sparkles, Mail, Lock, Loader2, ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
@@ -14,35 +13,25 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    if (!isSupabaseConfigured()) {
-      setError('Supabase is not configured. Check your environment variables.');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (authError) {
-        setError(authError.message);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Login failed');
         setLoading(false);
         return;
       }
 
-      if (data?.session) {
-        // Full page navigation ensures cookies are sent to middleware
-        window.location.href = '/dashboard';
-        return;
-      }
-
-      // No session and no error — user may need to confirm email
-      setError('No session returned. Check if your email is confirmed.');
-      setLoading(false);
+      // Server set the auth cookie, now navigate
+      window.location.href = '/dashboard';
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err?.message || 'Network error. Please check your connection and try again.');

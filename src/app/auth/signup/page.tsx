@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { supabase, isSupabaseConfigured } from '@/supabase/client';
 import { Sparkles, Mail, Lock, User, Loader2, ArrowLeft } from 'lucide-react';
 
 export default function SignupPage() {
@@ -15,49 +14,23 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    if (!isSupabaseConfigured()) {
-      setError('Supabase is not configured. Check your environment variables.');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const { data, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: name } },
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
       });
 
-      if (authError) {
-        setError(authError.message);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Signup failed');
         setLoading(false);
         return;
       }
 
-      if (data?.user?.identities?.length === 0) {
-        setError('This email is already registered. Try signing in instead.');
-        setLoading(false);
-        return;
-      }
-
-      // Create user profile (best-effort, don't block on failure)
-      try {
-        const res = await fetch('/api/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, name }),
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          console.error('Profile creation warning:', errData);
-        }
-      } catch (err) {
-        console.error('Profile creation network error:', err);
-      }
-
-      // Full page navigation ensures cookies are sent to middleware
       window.location.href = '/dashboard';
     } catch (err: any) {
       console.error('Signup error:', err);

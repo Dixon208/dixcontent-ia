@@ -2,18 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  // Skip auth checks on auth pages and public routes
-  const pathname = request.nextUrl.pathname;
-  if (pathname.startsWith("/auth") || pathname === "/" || pathname.startsWith("/_next")) {
+  // Gracefully handle missing env vars
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return NextResponse.next();
   }
 
   let supabaseResponse = NextResponse.next({ request });
-
-  // Gracefully handle missing env vars — don't crash the whole site
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return NextResponse.next();
-  }
 
   try {
     const supabase = createServerClient(
@@ -24,7 +18,7 @@ export async function middleware(request: NextRequest) {
           getAll() {
             return request.cookies.getAll();
           },
-          setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
+          setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
             supabaseResponse = NextResponse.next({ request });
             cookiesToSet.forEach(({ name, value, options }) =>
@@ -35,19 +29,26 @@ export async function middleware(request: NextRequest) {
       }
     );
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
+    const pathname = request.nextUrl.pathname;
 
-    if (!user) {
+    // User is logged in but on an auth page → send to dashboard
+    if (user && (pathname.startsWith("/auth") || pathname === "/")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+
+    // Not logged in and trying to access protected page → send to login
+    if (!user && !pathname.startsWith("/auth") && pathname !== "/") {
       const url = request.nextUrl.clone();
       url.pathname = "/auth/login";
       return NextResponse.redirect(url);
     }
 
     return supabaseResponse;
-  } catch (e) {
-    // If Supabase is unavailable, allow access — auth pages handle their own errors
+  } catch {
+    // If Supabase is unavailable, let the page through
     return NextResponse.next();
   }
 }
