@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { supabase, isSupabaseConfigured } from '@/supabase/client';
 import { Sparkles, Mail, Lock, Loader2, ArrowLeft } from 'lucide-react';
 
@@ -11,7 +10,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +35,8 @@ export default function LoginPage() {
       }
 
       if (data?.session) {
-        router.replace('/dashboard');
+        // Full page navigation ensures cookies are sent to middleware
+        window.location.href = '/dashboard';
         return;
       }
 

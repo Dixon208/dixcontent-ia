@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { supabase, isSupabaseConfigured } from '@/supabase/client';
 import { Sparkles, Mail, Lock, User, Loader2, ArrowLeft } from 'lucide-react';
 
@@ -12,7 +11,6 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +57,8 @@ export default function SignupPage() {
         console.error('Profile creation network error:', err);
       }
 
-      router.replace('/dashboard');
+      // Full page navigation ensures cookies are sent to middleware
+      window.location.href = '/dashboard';
     } catch (err: any) {
       console.error('Signup error:', err);
       setError(err?.message || 'Network error. Please check your connection and try again.');
