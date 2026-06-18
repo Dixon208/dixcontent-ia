@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No session returned" }, { status: 401 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, redirect: "/dashboard" });
   } catch (err: any) {
     console.error("Login API error:", err);
     return NextResponse.json({ error: err.message || "Login failed" }, { status: 500 });
