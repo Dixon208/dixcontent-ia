@@ -11,6 +11,7 @@ export async function POST(request: Request) {
     }
 
     const cookieStore = await cookies();
+    let response = NextResponse.json({ success: true, redirect: "/dashboard" });
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,9 +22,9 @@ export async function POST(request: Request) {
             return cookieStore.getAll();
           },
           setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set(name, value, options);
+            });
           },
         },
       }
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No session returned" }, { status: 401 });
     }
 
-    return NextResponse.json({ success: true, redirect: "/dashboard" });
+    return response;
   } catch (err: any) {
     console.error("Login API error:", err);
     return NextResponse.json({ error: err.message || "Login failed" }, { status: 500 });
