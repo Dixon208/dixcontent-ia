@@ -40,7 +40,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Not logged in and trying to access protected page → send to login
-    if (!user && !pathname.startsWith("/auth") && pathname !== "/") {
+    if (!user && !pathname.startsWith("/auth") && !pathname.startsWith("/api") && pathname !== "/") {
       const url = request.nextUrl.clone();
       url.pathname = "/auth/login";
       return NextResponse.redirect(url);
