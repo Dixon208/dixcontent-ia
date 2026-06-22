@@ -13,7 +13,7 @@ export async function generateAIContent(topic: string, niche: string | undefined
       'X-Title': 'DixContent AI',
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-sonnet-4.5',
+      model: 'openrouter/free',
       messages: [
         { role: 'system', content: promptConfig.system },
         { role: 'user', content: promptConfig.user(topic, niche) },
