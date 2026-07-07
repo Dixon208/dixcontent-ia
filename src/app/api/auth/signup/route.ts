@@ -19,7 +19,8 @@ export async function POST(request: Request) {
     })
 
     if (authError) {
-      return NextResponse.json({ error: authError.message }, { status: 400 })
+  console.error('Auth signup error:', authError)
+  return NextResponse.json({ error: authError.message }, { status: 400 })
     }
 
     if (!authData.user) {
